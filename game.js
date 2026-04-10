@@ -16,10 +16,13 @@ let player = {
   speed: 5
 };
 
-// GAME DATA
+// LOAD DATA
+let coins = parseInt(localStorage.getItem("coins")) || 0;
+let ownedSkins = JSON.parse(localStorage.getItem("skins")) || ["lime"];
+let currentSkin = localStorage.getItem("currentSkin") || "lime";
+
 let enemies = [];
 let score = 0;
-let coins = parseInt(localStorage.getItem("coins")) || 0;
 let gameOver = false;
 
 // INPUT
@@ -33,6 +36,31 @@ canvas.addEventListener("touchmove", e => {
   touchX = e.touches[0].clientX;
   touchY = e.touches[0].clientY;
 });
+
+// SHOP
+function toggleShop() {
+  document.getElementById("shop").classList.toggle("hidden");
+}
+
+function buySkin(color, cost) {
+  if (ownedSkins.includes(color)) {
+    currentSkin = color;
+    localStorage.setItem("currentSkin", currentSkin);
+    return;
+  }
+
+  if (coins >= cost) {
+    coins -= cost;
+    ownedSkins.push(color);
+    currentSkin = color;
+
+    localStorage.setItem("coins", coins);
+    localStorage.setItem("skins", JSON.stringify(ownedSkins));
+    localStorage.setItem("currentSkin", currentSkin);
+  } else {
+    alert("Not enough coins!");
+  }
+}
 
 // SPAWN ENEMY
 function spawnEnemy() {
@@ -94,13 +122,13 @@ function update() {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Player
-  ctx.fillStyle = "lime";
+  // PLAYER
+  ctx.fillStyle = currentSkin;
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.size, 0, Math.PI*2);
   ctx.fill();
 
-  // Enemies
+  // ENEMIES
   ctx.fillStyle = "red";
   enemies.forEach(e => {
     ctx.beginPath();
