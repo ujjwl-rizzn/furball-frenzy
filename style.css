@@ -1,98 +1,86 @@
-diff --git a/style.css b/style.css
-index 05be1c4ab6f1ff9b08827cd75c4cd4d41978657c..1890e7eeae07b22d3e07ff664736b9871e1d613c 100644
---- a/style.css
-+++ b/style.css
-@@ -1,57 +1,86 @@
- body {
-   margin: 0;
--  background: #0a0a0a;
-+  background: radial-gradient(circle at 50% 20%, #18233a 0%, #090c14 55%, #05070c 100%);
-   overflow: hidden;
--  font-family: Arial, sans-serif;
-+  font-family: "Trebuchet MS", Arial, sans-serif;
-   color: white;
- }
- 
- canvas {
-   display: block;
- }
- 
- .hidden {
-   display: none;
- }
- 
- /* MENU */
- #menu, #gameOver {
-   position: absolute;
-   top: 40%;
-   left: 50%;
-   transform: translate(-50%, -50%);
-   text-align: center;
- }
- 
- /* UI */
- #ui {
-   position: absolute;
-   top: 10px;
-   left: 10px;
-+  background: rgba(7, 10, 20, 0.65);
-+  padding: 12px;
-+  border-radius: 10px;
-+  border: 1px solid rgba(120, 140, 255, 0.4);
-+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
- }
- 
- /* SHOP */
- #shop {
-   position: absolute;
-   top: 50px;
-   left: 50%;
-   transform: translateX(-50%);
--  background: #111;
-+  background: rgba(9, 12, 24, 0.92);
-   padding: 20px;
--  border: 1px solid #444;
-+  border: 1px solid rgba(129, 148, 255, 0.45);
-+  min-width: 220px;
-+  border-radius: 10px;
-+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-+}
-+
-+#powerTimers {
-+  margin: 6px 0;
-+  color: #ddd;
-+  font-size: 14px;
- }
- 
- /* BUTTONS */
- button {
-   padding: 10px 20px;
-   margin: 5px;
--  background: #111;
-+  background: #171d30;
-   color: white;
--  border: 1px solid #555;
-+  border: 1px solid #5e6eac;
-   cursor: pointer;
-   transition: 0.2s;
-+  border-radius: 8px;
- }
- 
- button:hover {
--  background: #333;
-+  background: #2c3760;
-+}
-+
-+.popup {
-+  position: absolute;
-+  top: 20px;
-+  left: 50%;
-+  transform: translateX(-50%);
-+  background: rgba(20, 28, 50, 0.95);
-+  border: 1px solid rgba(151, 168, 255, 0.75);
-+  border-radius: 10px;
-+  padding: 10px 16px;
-+  font-weight: 700;
-+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
-+  z-index: 20;
- }
+body {
+  margin: 0;
+  background: radial-gradient(circle at 50% 20%, #18233a 0%, #090c14 55%, #05070c 100%);
+  overflow: hidden;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  color: white;
+}
+
+canvas {
+  display: block;
+}
+
+.hidden {
+  display: none;
+}
+
+/* MENU */
+#menu, #gameOver {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+/* UI */
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(7, 10, 20, 0.65);
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 140, 255, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+/* SHOP */
+#shop {
+  position: absolute;
+  top: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(9, 12, 24, 0.92);
+  padding: 20px;
+  border: 1px solid rgba(129, 148, 255, 0.45);
+  min-width: 220px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+#powerTimers {
+  margin: 6px 0;
+  color: #ddd;
+  font-size: 14px;
+}
+
+/* BUTTONS */
+button {
+  padding: 10px 20px;
+  margin: 5px;
+  background: #171d30;
+  color: white;
+  border: 1px solid #5e6eac;
+  cursor: pointer;
+  transition: 0.2s;
+  border-radius: 8px;
+}
+
+button:hover {
+  background: #2c3760;
+}
+
+.popup {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 28, 50, 0.95);
+  border: 1px solid rgba(151, 168, 255, 0.75);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 700;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  z-index: 20;
+}
