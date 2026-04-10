@@ -8,6 +8,10 @@ function resize() {
 resize();
 window.addEventListener("resize", resize);
 
+// AUDIO
+const hitSound = new Audio("https://www.soundjay.com/button/beep-07.wav");
+const coinSound = new Audio("https://www.soundjay.com/button/beep-09.wav");
+
 // PLAYER
 let player = {
   x: canvas.width / 2,
@@ -16,26 +20,32 @@ let player = {
   speed: 5
 };
 
-// LOAD DATA
+// DATA
 let coins = parseInt(localStorage.getItem("coins")) || 0;
 let ownedSkins = JSON.parse(localStorage.getItem("skins")) || ["lime"];
 let currentSkin = localStorage.getItem("currentSkin") || "lime";
 
 let enemies = [];
 let score = 0;
-let gameOver = false;
+let gameRunning = false;
 
 // INPUT
 let keys = {};
 window.addEventListener("keydown", e => keys[e.key] = true);
 window.addEventListener("keyup", e => keys[e.key] = false);
 
-// TOUCH
 let touchX = null, touchY = null;
 canvas.addEventListener("touchmove", e => {
   touchX = e.touches[0].clientX;
   touchY = e.touches[0].clientY;
 });
+
+// START GAME
+function startGame() {
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("ui").classList.remove("hidden");
+  gameRunning = true;
+}
 
 // SHOP
 function toggleShop() {
@@ -51,6 +61,7 @@ function buySkin(color, cost) {
 
   if (coins >= cost) {
     coins -= cost;
+    coinSound.play();
     ownedSkins.push(color);
     currentSkin = color;
 
@@ -62,8 +73,10 @@ function buySkin(color, cost) {
   }
 }
 
-// SPAWN ENEMY
+// ENEMIES
 function spawnEnemy() {
+  if (!gameRunning) return;
+
   let edge = Math.floor(Math.random() * 4);
   let x, y;
 
@@ -75,7 +88,7 @@ function spawnEnemy() {
   enemies.push({ x, y, size: 15, speed: 2 + Math.random()*2 });
 }
 
-// MOVE PLAYER
+// MOVE
 function movePlayer() {
   if (keys["ArrowUp"] || keys["w"]) player.y -= player.speed;
   if (keys["ArrowDown"] || keys["s"]) player.y += player.speed;
@@ -92,7 +105,7 @@ function movePlayer() {
 
 // UPDATE
 function update() {
-  if (gameOver) return;
+  if (!gameRunning) return;
 
   movePlayer();
 
@@ -105,14 +118,17 @@ function update() {
     e.y += dy / dist * e.speed;
 
     if (dist < player.size + e.size) {
-      gameOver = true;
-      localStorage.setItem("coins", coins);
-      alert("Game Over!");
+      hitSound.play();
+      gameRunning = false;
+      document.getElementById("gameOver").classList.remove("hidden");
     }
   });
 
   score++;
-  if (score % 100 === 0) coins++;
+  if (score % 100 === 0) {
+    coins++;
+    coinSound.play();
+  }
 
   document.getElementById("score").innerText = score;
   document.getElementById("coins").innerText = coins;
@@ -122,13 +138,11 @@ function update() {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // PLAYER
   ctx.fillStyle = currentSkin;
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.size, 0, Math.PI*2);
   ctx.fill();
 
-  // ENEMIES
   ctx.fillStyle = "red";
   enemies.forEach(e => {
     ctx.beginPath();
@@ -148,9 +162,8 @@ function gameLoop() {
 function restartGame() {
   enemies = [];
   score = 0;
-  gameOver = false;
-  player.x = canvas.width / 2;
-  player.y = canvas.height / 2;
+  document.getElementById("gameOver").classList.add("hidden");
+  gameRunning = true;
 }
 
 // SPAWN LOOP
