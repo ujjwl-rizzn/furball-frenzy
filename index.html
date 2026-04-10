@@ -1,28 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Furball Frenzy</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Furball Frenzy</title>
+<link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<div id="ui">
+<!-- START MENU -->
+<div id="menu">
+  <h1>Furball Frenzy</h1>
+  <button onclick="startGame()">Play</button>
+</div>
+
+<!-- GAME UI -->
+<div id="ui" class="hidden">
   <div>Score: <span id="score">0</span></div>
   <div>Coins: <span id="coins">0</span></div>
-  <button onclick="restartGame()">Restart</button>
   <button onclick="toggleShop()">Shop</button>
 </div>
 
+<!-- SHOP -->
 <div id="shop" class="hidden">
   <h2>Shop</h2>
-  <button onclick="buySkin('lime', 0)">Default (Free)</button>
-  <button onclick="buySkin('cyan', 5)">Cyan (5 coins)</button>
-  <button onclick="buySkin('yellow', 10)">Yellow (10 coins)</button>
-  <button onclick="buySkin('red', 20)">Red (20 coins)</button>
+  <button onclick="buySkin('lime', 0)">Default</button>
+  <button onclick="buySkin('cyan', 5)">Cyan (5)</button>
+  <button onclick="buySkin('yellow', 10)">Yellow (10)</button>
+  <button onclick="buySkin('red', 20)">Red (20)</button>
   <button onclick="toggleShop()">Close</button>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameOver" class="hidden">
+  <h2>Game Over</h2>
+  <button onclick="restartGame()">Restart</button>
 </div>
 
 <canvas id="game"></canvas>
