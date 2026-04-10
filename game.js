@@ -1,46 +1,68 @@
-// 🔊 FIXED SOUND SYSTEM
+// 🔊 SAFE SOUND SYSTEM (NON-BREAKING)
 let audioCtx = null;
 let audioEnabled = false;
 
 function initAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  } catch (e) {
+    console.log("Audio not supported");
   }
 }
 
 function playSound(type) {
-  if (!audioEnabled || !audioCtx) return;
+  try {
+    if (!audioEnabled || !audioCtx) return;
 
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
 
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
 
-  if (type === "coin") osc.frequency.value = 700;
-  if (type === "hit") osc.frequency.value = 150;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
 
-  osc.start();
-  gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.2);
+    if (type === "coin") osc.frequency.value = 700;
+    if (type === "hit") osc.frequency.value = 150;
+
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.2);
+  } catch (e) {
+    console.log("Sound error");
+  }
 }
+
+// 🔘 TOGGLE SOUND
 function toggleSound() {
-  audioEnabled = !audioEnabled;
-  alert(audioEnabled ? "Sound ON 🔊" : "Sound OFF 🔇");
-}
+  try {
+    initAudio();
+    audioEnabled = !audioEnabled;
 
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+
+    alert(audioEnabled ? "Sound ON 🔊" : "Sound OFF 🔇");
+  } catch (e) {
+    console.log("Toggle error");
+  }
+}
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// RESPONSIVE CANVAS
+// RESPONSIVE
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  // keep player inside after resize
   if (player) {
-    if (player.x > canvas.width - player.size) player.x = canvas.width - player.size;
-    if (player.y > canvas.height - player.size) player.y = canvas.height - player.size;
+    player.x = Math.min(canvas.width - player.size, Math.max(player.size, player.x));
+    player.y = Math.min(canvas.height - player.size, Math.max(player.size, player.y));
   }
 }
 resize();
@@ -78,15 +100,22 @@ canvas.addEventListener("touchmove", e => {
 
 // START
 function startGame() {
-  initAudio(); // 🔥 REQUIRED FOR SOUND
-  audioEnabled = true;
+  try {
+    initAudio();
+
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+
+    audioEnabled = true;
+  } catch (e) {}
 
   document.getElementById("menu").classList.add("hidden");
   document.getElementById("ui").classList.remove("hidden");
   gameRunning = true;
 }
 
-// MOVE PLAYER (FIXED)
+// MOVE PLAYER
 function movePlayer() {
   if (keys["ArrowUp"] || keys["w"]) player.y -= player.speed;
   if (keys["ArrowDown"] || keys["s"]) player.y += player.speed;
@@ -97,19 +126,16 @@ function movePlayer() {
     let dx = touchX - player.x;
     let dy = touchY - player.y;
 
-    player.x += dx * 0.05; // smoother
+    player.x += dx * 0.05;
     player.y += dy * 0.05;
   }
 
-  // HARD CLAMP (NO ESCAPE)
-  if (player.x < player.size) player.x = player.size;
-  if (player.x > canvas.width - player.size) player.x = canvas.width - player.size;
-
-  if (player.y < player.size) player.y = player.size;
-  if (player.y > canvas.height - player.size) player.y = canvas.height - player.size;
+  // HARD BOUNDARY
+  player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
+  player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
 }
 
-// ENEMY SPAWN
+// ENEMY
 function spawnEnemy() {
   if (!gameRunning) return;
 
@@ -128,7 +154,7 @@ function spawnEnemy() {
   });
 }
 
-// POWER UPS
+// POWERUPS
 function spawnPowerUp() {
   if (!gameRunning) return;
 
@@ -162,7 +188,6 @@ function update() {
   movePlayer();
   difficulty += 0.001;
 
-  // ENEMIES
   enemies.forEach(e => {
     let dx = player.x - e.x;
     let dy = player.y - e.y;
@@ -176,14 +201,13 @@ function update() {
         player.shield = false;
         createParticles(e.x, e.y);
       } else {
-        playSound("hit"); // 🔊
+        playSound("hit");
         gameRunning = false;
         document.getElementById("gameOver").classList.remove("hidden");
       }
     }
   });
 
-  // POWER UPS
   powerUps.forEach((p, i) => {
     let dx = player.x - p.x;
     let dy = player.y - p.y;
@@ -195,13 +219,12 @@ function update() {
 
       setTimeout(() => player.speed = 5, 3000);
 
-      playSound("coin"); // 🔊
+      playSound("coin");
       powerUps.splice(i, 1);
       createParticles(p.x, p.y);
     }
   });
 
-  // PARTICLES
   particles.forEach((p, i) => {
     p.x += p.dx;
     p.y += p.dy;
@@ -212,7 +235,7 @@ function update() {
   score++;
   if (score % 100 === 0) {
     coins++;
-    playSound("coin"); // 🔊
+    playSound("coin");
   }
 
   document.getElementById("score").innerText = Math.floor(score);
@@ -265,7 +288,6 @@ function restartGame() {
   player.speed = 5;
   player.shield = false;
 
-  // RESET POSITION ✅
   player.x = canvas.width / 2;
   player.y = canvas.height / 2;
 
