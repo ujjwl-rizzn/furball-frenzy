@@ -1,62 +1,53 @@
-diff --git a/index.html b/index.html
-index a348809ec61ff5566f99ebae4644aff984a539c0..08ebb7e2068b03c3c316940343187bbeb372cc76 100644
---- a/index.html
-+++ b/index.html
-@@ -1,45 +1,53 @@
- <!DOCTYPE html>
- <html lang="en">
- <head>
- <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>Furball Frenzy</title>
- <link rel="stylesheet" href="style.css">
- </head>
- 
- <body>
- 
- <!-- START MENU -->
- <div id="menu">
-   <h1>Furball Frenzy</h1>
-   <button onclick="startGame()">Play</button>
- </div>
- 
- <!-- GAME UI -->
- <div id="ui" class="hidden">
-   <div>Score: <span id="score">0</span></div>
-+  <div>High Score: <span id="highScore">0</span></div>
-   <div>Coins: <span id="coins">0</span></div>
-+  <div>Multiplier: <span id="multiplier">1.0x</span></div>
-+  <div>Mission: <span id="missionText">Survive 30s</span></div>
-+  <div id="powerTimers">Shield: 0.0s | Speed: 0.0s</div>
-   <button onclick="toggleShop()">Shop</button>
-+  <button id="pauseToggle" onclick="togglePause()">Pause</button>
-+  <button id="soundToggle" onclick="toggleSound()">Sound: On</button>
- </div>
- 
- <!-- SHOP -->
- <div id="shop" class="hidden">
-   <h2>Shop</h2>
--  <button onclick="buySkin('lime', 0)">Default</button>
--  <button onclick="buySkin('cyan', 5)">Cyan (5)</button>
--  <button onclick="buySkin('yellow', 10)">Yellow (10)</button>
--  <button onclick="buySkin('red', 20)">Red (20)</button>
-+  <button id="skin-lime" class="skin-btn" onclick="buySkin('lime', 0)">Default (0)</button>
-+  <button id="skin-cyan" class="skin-btn" onclick="buySkin('cyan', 5)">Cyan (5)</button>
-+  <button id="skin-yellow" class="skin-btn" onclick="buySkin('yellow', 10)">Yellow (10)</button>
-+  <button id="skin-red" class="skin-btn" onclick="buySkin('red', 20)">Red (20)</button>
-+  <button id="skin-magenta" class="skin-btn" onclick="buySkin('magenta', 35)">Magenta (35)</button>
-   <button onclick="toggleShop()">Close</button>
- </div>
- 
- <!-- GAME OVER -->
- <div id="gameOver" class="hidden">
-   <h2>Game Over</h2>
-   <button onclick="restartGame()">Restart</button>
- </div>
- 
- <canvas id="game"></canvas>
-+<div id="popup" class="popup hidden"></div>
- 
- <script src="game.js"></script>
- </body>
- </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Furball Frenzy</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- START MENU -->
+<div id="menu">
+  <h1>Furball Frenzy</h1>
+  <button onclick="startGame()">Play</button>
+</div>
+
+<!-- GAME UI -->
+<div id="ui" class="hidden">
+  <div>Score: <span id="score">0</span></div>
+  <div>High Score: <span id="highScore">0</span></div>
+  <div>Coins: <span id="coins">0</span></div>
+  <div>Multiplier: <span id="multiplier">1.0x</span></div>
+  <div>Mission: <span id="missionText">Survive 30s</span></div>
+  <div id="powerTimers">Shield: 0.0s | Speed: 0.0s</div>
+  <button onclick="toggleShop()">Shop</button>
+  <button id="pauseToggle" onclick="togglePause()">Pause</button>
+  <button id="soundToggle" onclick="toggleSound()">Sound: On</button>
+</div>
+
+<!-- SHOP -->
+<div id="shop" class="hidden">
+  <h2>Shop</h2>
+  <button id="skin-lime" class="skin-btn" onclick="buySkin('lime', 0)">Default (0)</button>
+  <button id="skin-cyan" class="skin-btn" onclick="buySkin('cyan', 5)">Cyan (5)</button>
+  <button id="skin-yellow" class="skin-btn" onclick="buySkin('yellow', 10)">Yellow (10)</button>
+  <button id="skin-red" class="skin-btn" onclick="buySkin('red', 20)">Red (20)</button>
+  <button id="skin-magenta" class="skin-btn" onclick="buySkin('magenta', 35)">Magenta (35)</button>
+  <button onclick="toggleShop()">Close</button>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameOver" class="hidden">
+  <h2>Game Over</h2>
+  <button onclick="restartGame()">Restart</button>
+</div>
+
+<canvas id="game"></canvas>
+<div id="popup" class="popup hidden"></div>
+
+<script src="game.js"></script>
+</body>
+</html>
