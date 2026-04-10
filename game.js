@@ -23,6 +23,11 @@ function playSound(type) {
   osc.start();
   gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.2);
 }
+function toggleSound() {
+  audioEnabled = !audioEnabled;
+  alert(audioEnabled ? "Sound ON 🔊" : "Sound OFF 🔇");
+}
+
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
