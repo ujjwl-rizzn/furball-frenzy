@@ -1,8 +1,10 @@
 diff --git a/game.js b/game.js
-index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e82542b919c5c 100644
+index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..73e3f430bb5f52018daeb40a1fcb1184983a083d 100644
 --- a/game.js
 +++ b/game.js
-@@ -1,232 +1,504 @@
+@@ -1,232 +1,650 @@
++"use strict";
++
  const canvas = document.getElementById("game");
  const ctx = canvas.getContext("2d");
  
@@ -10,45 +12,112 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +const scoreEl = document.getElementById("score");
 +const highScoreEl = document.getElementById("highScore");
 +const coinsEl = document.getElementById("coins");
++const multiplierEl = document.getElementById("multiplier");
++const missionTextEl = document.getElementById("missionText");
 +const powerTimersEl = document.getElementById("powerTimers");
 +const pauseToggleBtn = document.getElementById("pauseToggle");
 +const soundToggleBtn = document.getElementById("soundToggle");
++const popupEl = document.getElementById("popup");
 +
-+const GAME_CONFIG = {
-+  player: {
++const GAME_CONFIG = Object.freeze({
++  player: Object.freeze({
 +    size: 20,
 +    baseSpeed: 5,
 +    speedBoost: 8
-+  },
-+  progression: {
-+    difficultyRate: 0.001,
-+    coinEveryScore: 100
-+  },
-+  spawn: {
-+    enemyMs: 1000,
-+    powerUpMs: 5000
-+  },
-+  powerUps: {
++  }),
++  progression: Object.freeze({
++    difficultyRate: 0.0012,
++    coinEveryScore: 90,
++    multiplierStepMs: 9000,
++    maxMultiplier: 4
++  }),
++  spawn: Object.freeze({
++    enemyMs: 900,
++    powerUpMs: 4800
++  }),
++  powerUps: Object.freeze({
 +    shieldMs: 5000,
-+    speedMs: 3000
-+  },
-+  particles: {
-+    count: 10,
++    speedMs: 3500
++  }),
++  particles: Object.freeze({
++    count: 12,
 +    life: 30
-+  },
-+  enemies: {
++  }),
++  enemies: Object.freeze({
 +    baseChaserSpeed: 2,
-+    chaserScale: 0.45,
-+    zigzagScale: 0.35,
-+    tankScale: 0.3
-+  },
-+  skins: [
-+    { color: "lime", price: 0, label: "Default" },
-+    { color: "cyan", price: 5, label: "Cyan" },
-+    { color: "yellow", price: 10, label: "Yellow" },
-+    { color: "red", price: 20, label: "Red" }
-+  ]
-+};
++    chaserScale: 0.48,
++    zigzagScale: 0.38,
++    tankScale: 0.28,
++    sniperScale: 0.33
++  }),
++  skins: Object.freeze([
++    Object.freeze({ color: "lime", price: 0, label: "Default" }),
++    Object.freeze({ color: "cyan", price: 5, label: "Cyan" }),
++    Object.freeze({ color: "yellow", price: 10, label: "Yellow" }),
++    Object.freeze({ color: "red", price: 20, label: "Red" }),
++    Object.freeze({ color: "magenta", price: 35, label: "Magenta" })
++  ])
++});
++
++const VALID_SKINS = new Set(GAME_CONFIG.skins.map(s => s.color));
++
++function clamp(num, min, max) {
++  return Math.max(min, Math.min(max, num));
++}
++
++function safeInt(key, fallback, min = 0, max = 99999999) {
++  const raw = localStorage.getItem(key);
++  const val = Number.parseInt(raw, 10);
++  if (!Number.isFinite(val)) return fallback;
++  return clamp(val, min, max);
++}
++
++function safeBool(key, fallback = true) {
++  const raw = localStorage.getItem(key);
++  if (raw === null) return fallback;
++  return raw === "true";
++}
++
++function safeOwnedSkins() {
++  const raw = localStorage.getItem("ownedSkins");
++  if (!raw) return new Set(["lime"]);
++  try {
++    const arr = JSON.parse(raw);
++    if (!Array.isArray(arr)) return new Set(["lime"]);
++    const valid = arr.filter(c => typeof c === "string" && VALID_SKINS.has(c));
++    if (!valid.includes("lime")) valid.push("lime");
++    return new Set(valid);
++  } catch {
++    return new Set(["lime"]);
++  }
++}
++
++function checksumState(nextCoins, nextHighScore, ownedCount) {
++  return String((nextCoins * 31 + nextHighScore * 17 + ownedCount * 13) % 1000003);
++}
++
++function verifyStateOrRepair() {
++  const stored = localStorage.getItem("stateChecksum");
++  const expected = checksumState(coins, highScore, ownedSkins.size);
++  if (stored && stored !== expected) {
++    coins = 0;
++    highScore = Math.max(0, highScore);
++    ownedSkins.clear();
++    ownedSkins.add("lime");
++    player.color = "lime";
++    persistState();
++    showPopup("Save data was invalid and has been repaired.", "warn");
++  }
++}
++
++function persistState() {
++  localStorage.setItem("coins", String(coins));
++  localStorage.setItem("highScore", String(highScore));
++  localStorage.setItem("selectedSkin", player.color);
++  localStorage.setItem("ownedSkins", JSON.stringify(Array.from(ownedSkins)));
++  localStorage.setItem("soundEnabled", String(soundEnabled));
++  localStorage.setItem("stateChecksum", checksumState(coins, highScore, ownedSkins.size));
++}
 +
  function resize() {
    canvas.width = window.innerWidth;
@@ -67,14 +136,15 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +  size: GAME_CONFIG.player.size,
 +  speed: GAME_CONFIG.player.baseSpeed,
 +  shield: false,
-+  color: localStorage.getItem("selectedSkin") || "lime"
++  color: VALID_SKINS.has(localStorage.getItem("selectedSkin")) ? localStorage.getItem("selectedSkin") : "lime"
  };
  
 -// DATA
 -let coins = parseInt(localStorage.getItem("coins")) || 0;
-+let coins = parseInt(localStorage.getItem("coins"), 10) || 0;
-+let highScore = parseInt(localStorage.getItem("highScore"), 10) || 0;
-+const ownedSkins = new Set(JSON.parse(localStorage.getItem("ownedSkins") || '["lime"]'));
++let coins = safeInt("coins", 0);
++let highScore = safeInt("highScore", 0);
++const ownedSkins = safeOwnedSkins();
++let soundEnabled = safeBool("soundEnabled", true);
 +
  let enemies = [];
  let particles = [];
@@ -85,22 +155,42 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +let paused = false;
  let difficulty = 1;
 +let audioCtx = null;
-+let soundEnabled = localStorage.getItem("soundEnabled") !== "false";
 +let shieldUntil = 0;
 +let speedUntil = 0;
++let survivalChainMs = 0;
++let multiplier = 1;
++let mission = {
++  targetSec: 30,
++  reward: 12,
++  done: false
++};
++
++verifyStateOrRepair();
++
++function maybeGrantDailyReward() {
++  const now = new Date();
++  const todayKey = `${now.getUTCFullYear()}-${now.getUTCMonth() + 1}-${now.getUTCDate()}`;
++  const last = localStorage.getItem("dailyRewardDate");
++  if (last !== todayKey) {
++    coins += 5;
++    localStorage.setItem("dailyRewardDate", todayKey);
++    persistState();
++    showPopup("Daily reward: +5 coins", "success");
++    playSound("purchase");
++  }
++}
  
 -// INPUT
- let keys = {};
+-let keys = {};
 -window.addEventListener("keydown", e => keys[e.key] = true);
 -window.addEventListener("keyup", e => keys[e.key] = false);
++let keys = Object.create(null);
 +let touchX = null;
 +let touchY = null;
 +
 +window.addEventListener("keydown", e => {
 +  keys[e.key] = true;
-+  if (e.key === "Escape") {
-+    togglePause();
-+  }
++  if (e.key === "Escape") togglePause();
 +});
 +window.addEventListener("keyup", e => {
 +  keys[e.key] = false;
@@ -112,17 +202,30 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
    touchX = e.touches[0].clientX;
    touchY = e.touches[0].clientY;
 +}, { passive: false });
-+
 +canvas.addEventListener("touchend", () => {
 +  touchX = null;
 +  touchY = null;
  });
  
 -// START
++function showPopup(message, type = "info") {
++  if (!popupEl) return;
++  popupEl.innerText = message;
++  popupEl.classList.remove("hidden");
++  popupEl.style.borderColor = type === "success" ? "#84ffb0" : type === "warn" ? "#ffd27f" : "#97a8ff";
++  clearTimeout(showPopup.timer);
++  showPopup.timer = setTimeout(() => popupEl.classList.add("hidden"), 1800);
++}
++showPopup.timer = null;
++
 +function updateTopBar() {
 +  scoreEl.innerText = Math.floor(score);
 +  highScoreEl.innerText = highScore;
 +  coinsEl.innerText = coins;
++  multiplierEl.innerText = `${multiplier.toFixed(1)}x`;
++  missionTextEl.innerText = mission.done
++    ? `Completed! +${mission.reward} coins`
++    : `Survive ${mission.targetSec}s (${Math.floor(score / 60)}s)`;
 +
 +  const now = Date.now();
 +  const shieldRemaining = Math.max(0, (shieldUntil - now) / 1000);
@@ -131,15 +234,11 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +}
 +
 +function updatePauseButton() {
-+  if (pauseToggleBtn) {
-+    pauseToggleBtn.innerText = paused ? "Resume" : "Pause";
-+  }
++  if (pauseToggleBtn) pauseToggleBtn.innerText = paused ? "Resume" : "Pause";
 +}
 +
 +function updateSoundButton() {
-+  if (soundToggleBtn) {
-+    soundToggleBtn.innerText = `Sound: ${soundEnabled ? "On" : "Off"}`;
-+  }
++  if (soundToggleBtn) soundToggleBtn.innerText = `Sound: ${soundEnabled ? "On" : "Off"}`;
 +}
 +
 +function updateShopButtons() {
@@ -150,19 +249,22 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +    const owned = ownedSkins.has(skin.color);
 +    const equipped = player.color === skin.color;
 +    let suffix = "";
-+
 +    if (equipped) suffix = " - Equipped";
 +    else if (owned) suffix = " - Owned";
 +
 +    btn.innerText = `${skin.label} (${skin.price})${suffix}`;
++    btn.disabled = !owned && coins < skin.price;
 +  }
 +}
 +
  function startGame() {
    document.getElementById("menu").classList.add("hidden");
    document.getElementById("ui").classList.remove("hidden");
++
++  maybeGrantDailyReward();
 +  initAudio();
 +  playSound("start");
++
    gameRunning = true;
 +  paused = false;
 +  updatePauseButton();
@@ -183,23 +285,27 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +}
 +
 +function buySkin(color, price) {
++  if (!VALID_SKINS.has(color)) {
++    showPopup("Invalid skin selection", "warn");
++    return;
++  }
++
 +  if (!ownedSkins.has(color)) {
 +    if (coins < price) {
 +      playSound("error");
++      showPopup("Not enough coins", "warn");
 +      return;
 +    }
 +    coins -= price;
 +    ownedSkins.add(color);
 +    playSound("purchase");
++    showPopup(`Unlocked ${color} skin!`, "success");
 +  } else {
 +    playSound("click");
 +  }
 +
 +  player.color = color;
-+  localStorage.setItem("coins", coins.toString());
-+  localStorage.setItem("selectedSkin", color);
-+  localStorage.setItem("ownedSkins", JSON.stringify(Array.from(ownedSkins)));
-+
++  persistState();
 +  updateTopBar();
 +  updateShopButtons();
 +}
@@ -226,9 +332,7 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +
 +  osc.type = type;
 +  osc.frequency.setValueAtTime(freq, now);
-+  if (slideTo) {
-+    osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
-+  }
++  if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
 +
 +  gain.gain.setValueAtTime(0.0001, now);
 +  gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
@@ -249,12 +353,13 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +  if (kind === "click") tone({ freq: 500, slideTo: 420, duration: 0.06, type: "triangle", volume: 0.04 });
 +  if (kind === "purchase") tone({ freq: 600, slideTo: 1000, duration: 0.14, type: "square", volume: 0.05 });
 +  if (kind === "error") tone({ freq: 220, slideTo: 160, duration: 0.12, type: "sawtooth", volume: 0.06 });
++  if (kind === "levelup") tone({ freq: 450, slideTo: 850, duration: 0.2, type: "triangle", volume: 0.06 });
 +}
 +
 +function toggleSound() {
 +  soundEnabled = !soundEnabled;
-+  localStorage.setItem("soundEnabled", soundEnabled.toString());
 +  updateSoundButton();
++  persistState();
 +  playSound("click");
  }
  
@@ -275,8 +380,10 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
    }
  
 -  // KEEP INSIDE SCREEN ✅
-   player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
-   player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
+-  player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
+-  player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
++  player.x = clamp(player.x, player.size, canvas.width - player.size);
++  player.y = clamp(player.y, player.size, canvas.height - player.size);
  }
  
 -// ENEMY SPAWN (SCALES WITH DIFFICULTY)
@@ -303,20 +410,23 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +  const { x, y } = randomEdgeSpawn();
 +  const roll = Math.random();
 +  let type = "chaser";
-+  if (difficulty > 2.5 && roll > 0.7) type = "zigzag";
-+  if (difficulty > 4.5 && roll > 0.88) type = "tank";
++  if (difficulty > 2.2 && roll > 0.65) type = "zigzag";
++  if (difficulty > 4.2 && roll > 0.84) type = "tank";
++  if (difficulty > 6.2 && roll > 0.93) type = "sniper";
 +
 +  const base = GAME_CONFIG.enemies.baseChaserSpeed;
 +  const speedByType = {
 +    chaser: base + difficulty * GAME_CONFIG.enemies.chaserScale,
 +    zigzag: base + difficulty * GAME_CONFIG.enemies.zigzagScale,
-+    tank: base + difficulty * GAME_CONFIG.enemies.tankScale
++    tank: base + difficulty * GAME_CONFIG.enemies.tankScale,
++    sniper: base + difficulty * GAME_CONFIG.enemies.sniperScale
 +  };
 +
 +  const sizeByType = {
 +    chaser: 15,
 +    zigzag: 11,
-+    tank: 22
++    tank: 22,
++    sniper: 13
 +  };
  
    enemies.push({
@@ -328,20 +438,20 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +    type,
 +    size: sizeByType[type],
 +    speed: speedByType[type],
-+    zigzagPhase: Math.random() * Math.PI * 2
++    zigzagPhase: Math.random() * Math.PI * 2,
++    pulseTimer: 0
    });
  }
  
 -// POWER UPS
  function spawnPowerUp() {
 -  if (!gameRunning) return;
-+  if (!gameRunning || paused) return;
- 
+-
 -  let types = ["shield", "speed"];
 -  let type = types[Math.floor(Math.random()*types.length)];
-+  const types = ["shield", "speed"];
-+  const type = types[Math.floor(Math.random() * types.length)];
++  if (!gameRunning || paused) return;
  
++  const type = Math.random() > 0.5 ? "shield" : "speed";
    powerUps.push({
      x: Math.random() * canvas.width,
      y: Math.random() * canvas.height,
@@ -369,37 +479,42 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
  }
  
 -// UPDATE
--function update() {
--  if (!gameRunning) return;
 +function updatePlayerPowerStates() {
 +  const now = Date.now();
- 
--  movePlayer();
-+  if (shieldUntil > now) {
-+    player.shield = true;
-+  } else {
-+    player.shield = false;
-+  }
- 
--  // DIFFICULTY INCREASE 🔥
--  difficulty += 0.001;
-+  if (speedUntil > now) {
-+    player.speed = GAME_CONFIG.player.speedBoost;
-+  } else {
-+    player.speed = GAME_CONFIG.player.baseSpeed;
++  player.shield = shieldUntil > now;
++  player.speed = speedUntil > now ? GAME_CONFIG.player.speedBoost : GAME_CONFIG.player.baseSpeed;
++}
++
++function updateMultiplier() {
++  survivalChainMs += 1000 / 60;
++  const next = 1 + Math.floor(survivalChainMs / GAME_CONFIG.progression.multiplierStepMs) * 0.3;
++  const clamped = clamp(next, 1, GAME_CONFIG.progression.maxMultiplier);
++  if (clamped > multiplier) {
++    multiplier = clamped;
++    playSound("levelup");
++    showPopup(`Multiplier up: ${multiplier.toFixed(1)}x`, "success");
 +  }
 +}
- 
--  // ENEMIES
--  enemies.forEach(e => {
--    let dx = player.x - e.x;
--    let dy = player.y - e.y;
--    let dist = Math.sqrt(dx*dx + dy*dy);
-+function update() {
-+  if (!gameRunning || paused) return;
 +
-+  movePlayer();
++function handleMission() {
++  if (mission.done) return;
++  const sec = score / 60;
++  if (sec >= mission.targetSec) {
++    mission.done = true;
++    coins += mission.reward;
++    persistState();
++    showPopup(`Mission complete! +${mission.reward} coins`, "success");
++    playSound("purchase");
++  }
++}
++
+ function update() {
+-  if (!gameRunning) return;
++  if (!gameRunning || paused) return;
+ 
+   movePlayer();
 +  updatePlayerPowerStates();
++  updateMultiplier();
 +
 +  difficulty += GAME_CONFIG.progression.difficultyRate;
 +
@@ -424,6 +539,22 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +      ny /= nLen;
 +    }
  
+-  // DIFFICULTY INCREASE 🔥
+-  difficulty += 0.001;
+-
+-  // ENEMIES
+-  enemies.forEach(e => {
+-    let dx = player.x - e.x;
+-    let dy = player.y - e.y;
+-    let dist = Math.sqrt(dx*dx + dy*dy);
++    if (e.type === "sniper") {
++      e.pulseTimer += 1;
++      if (e.pulseTimer % 90 < 10) {
++        nx *= 2;
++        ny *= 2;
++      }
++    }
+ 
 -    e.x += dx / dist * e.speed;
 -    e.y += dy / dist * e.speed;
 +    e.x += nx * e.speed;
@@ -438,11 +569,13 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
          createParticles(e.x, e.y);
 +        enemies.splice(i, 1);
 +        playSound("hit");
++        score += 30 * multiplier;
        } else {
          gameRunning = false;
 +        paused = false;
 +        updatePauseButton();
 +        playSound("gameover");
++        showPopup("Game Over", "warn");
          document.getElementById("gameOver").classList.remove("hidden");
        }
      }
@@ -469,6 +602,7 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 +      if (p.type === "shield") shieldUntil = now + GAME_CONFIG.powerUps.shieldMs;
 +      if (p.type === "speed") speedUntil = now + GAME_CONFIG.powerUps.speedMs;
 +      playSound("powerup");
++      showPopup(`${p.type.toUpperCase()} activated`, "success");
  
        powerUps.splice(i, 1);
        createParticles(p.x, p.y);
@@ -488,22 +622,26 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
 -  });
 +  }
  
-   score++;
+-  score++;
 -  if (score % 100 === 0) coins++;
-+  if (score > highScore) {
-+    highScore = score;
-+    localStorage.setItem("highScore", Math.floor(highScore).toString());
-+  }
-+
-+  if (score % GAME_CONFIG.progression.coinEveryScore === 0) {
-+    coins++;
-+    localStorage.setItem("coins", coins.toString());
-+    playSound("coin");
-+  }
++  score += multiplier;
  
 -  document.getElementById("score").innerText = Math.floor(score);
 -  document.getElementById("coins").innerText = coins;
++  if (score > highScore) {
++    highScore = Math.floor(score);
++    persistState();
++  }
++
++  if (Math.floor(score) % GAME_CONFIG.progression.coinEveryScore === 0 && Math.floor(score) !== 0) {
++    coins += 1;
++    persistState();
++    playSound("coin");
++  }
++
++  handleMission();
 +  updateTopBar();
++  updateShopButtons();
  }
  
 -// DRAW
@@ -512,6 +650,14 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
  
 -  // PLAYER
 -  ctx.fillStyle = player.shield ? "cyan" : "lime";
++  const glow = ctx.createRadialGradient(player.x, player.y, 3, player.x, player.y, player.size * 3);
++  glow.addColorStop(0, "rgba(255,255,255,0.7)");
++  glow.addColorStop(1, "rgba(255,255,255,0)");
++  ctx.fillStyle = glow;
++  ctx.beginPath();
++  ctx.arc(player.x, player.y, player.size * 2.4, 0, Math.PI * 2);
++  ctx.fill();
++
 +  ctx.fillStyle = player.shield ? "cyan" : player.color;
    ctx.beginPath();
 -  ctx.arc(player.x, player.y, player.size, 0, Math.PI*2);
@@ -523,6 +669,7 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
    enemies.forEach(e => {
 +    if (e.type === "tank") ctx.fillStyle = "#ff3b3b";
 +    else if (e.type === "zigzag") ctx.fillStyle = "#ff8c42";
++    else if (e.type === "sniper") ctx.fillStyle = "#d058ff";
 +    else ctx.fillStyle = "red";
 +
      ctx.beginPath();
@@ -533,7 +680,8 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
  
 -  // POWER UPS
    powerUps.forEach(p => {
-     ctx.fillStyle = p.type === "shield" ? "blue" : "yellow";
+-    ctx.fillStyle = p.type === "shield" ? "blue" : "yellow";
++    ctx.fillStyle = p.type === "shield" ? "#46a8ff" : "#ffd84a";
      ctx.beginPath();
 -    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
 +    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
@@ -542,9 +690,10 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
  
 -  // PARTICLES
    ctx.fillStyle = "white";
-   particles.forEach(p => {
-     ctx.fillRect(p.x, p.y, 2, 2);
-   });
+-  particles.forEach(p => {
+-    ctx.fillRect(p.x, p.y, 2, 2);
+-  });
++  particles.forEach(p => ctx.fillRect(p.x, p.y, 2, 2));
 +
 +  if (paused && gameRunning) {
 +    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
@@ -569,11 +718,15 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
    enemies = [];
    powerUps = [];
    particles = [];
++
    score = 0;
    difficulty = 1;
 -  player.speed = 5;
 +  shieldUntil = 0;
 +  speedUntil = 0;
++  multiplier = 1;
++  survivalChainMs = 0;
++  mission = { targetSec: 30 + Math.floor(Math.random() * 20), reward: 10 + Math.floor(Math.random() * 12), done: false };
 +
 +  player.speed = GAME_CONFIG.player.baseSpeed;
    player.shield = false;
@@ -581,6 +734,7 @@ index 9b8fd20587b171aaffd65b7ae97c6aa2094847e2..d88779b36ea7895b263958d25c9e8254
    document.getElementById("gameOver").classList.add("hidden");
    gameRunning = true;
 +  paused = false;
++
 +  updatePauseButton();
 +  updateTopBar();
  }
