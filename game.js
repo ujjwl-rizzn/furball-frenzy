@@ -1,3 +1,22 @@
+let audioEnabled = false;
+
+function playSound(type) {
+  if (!audioEnabled) return;
+
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  if (type === "coin") osc.frequency.value = 800;
+  if (type === "hit") osc.frequency.value = 200;
+
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.2);
+}
+
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
@@ -44,6 +63,7 @@ function startGame() {
   document.getElementById("menu").classList.add("hidden");
   document.getElementById("ui").classList.remove("hidden");
   gameRunning = true;
+  audioEnabled = true;
 }
 
 // MOVE PLAYER (WITH BOUNDARY FIX)
@@ -132,6 +152,7 @@ function update() {
         player.shield = false;
         createParticles(e.x, e.y);
       } else {
+        playSound("hit");
         gameRunning = false;
         document.getElementById("gameOver").classList.remove("hidden");
       }
@@ -150,6 +171,7 @@ function update() {
 
       setTimeout(() => player.speed = 5, 3000);
 
+      playSound("coin");
       powerUps.splice(i, 1);
       createParticles(p.x, p.y);
     }
@@ -165,7 +187,13 @@ function update() {
   });
 
   score++;
-  if (score % 100 === 0) coins++;
+  
+if (score % 100 === 0) 
+{
+  coins++;
+  playSound("coin"); // 🔊 ADD THIS
+}
+
 
   document.getElementById("score").innerText = Math.floor(score);
   document.getElementById("coins").innerText = coins;
